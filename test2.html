@@ -1,0 +1,152 @@
+<!doctype html>
+    <head>
+        <meta charset="UTF-8">
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+        <style>
+            /* CSS comes here */
+            
+            body {
+                font-family: arial;
+            }
+
+
+            /* CSS */
+            .button-71 {
+
+              position: relative;
+              text-align: center;
+              text-decoration: none;
+              transition: all .3s;
+              user-select: none;
+              -webkit-user-select: none;
+              top: 480px;
+              display: inline-block;
+              padding: 15px 25px;
+              font-size: 24px;
+              cursor: pointer;
+              text-align: center;
+              outline: none;
+              color: #fff;
+              background-color: #00CB7A;
+              border: none;
+              border-radius: 15px;
+              box-shadow: 0 6px #999;
+            }
+
+            .button-71:before {
+              background-color: initial;
+              border-radius: 125px;
+              content: "";
+              height: 45%;
+              left: 4%;
+              opacity: .5;
+              position: absolute;
+              top: 0;
+              transition: all .3s;
+              width: 85%;
+            }
+
+            .button-71:hover {
+              box-shadow: rgba(255, 255, 255, .2) 0 3px 15px inset, rgba(0, 0, 0, .1) 0 3px 5px, rgba(0, 0, 0, .1) 0 10px 13px;
+              transform: scale(1.05);
+            }
+
+            @media (min-width: 768px) {
+              .button-71 {
+                padding: 16px 48px;
+              }
+            }
+        </style>
+    </head>
+    <body >
+    <center>
+    
+        <button class="button-71" role="button" id="but" >connect</button><br>
+        <button class="button-71" role="button" onclick="stt()" >start</button><br>
+
+        <p><span id="action"></span></p>
+        <div id="output" class="hide"></div>
+        <script>
+        /* JS comes here */
+
+        document.querySelector('#but').addEventListener('click', async () => {
+
+            port = await navigator.serial.requestPort();
+            await port.open({ baudRate: 9600 });
+
+            const textDecoder = new TextDecoderStream();
+            const readableStreamClosed = port.readable.pipeTo(textDecoder.writable);
+            const reader = textDecoder.readable.getReader();
+
+
+            // Listen to data coming from the serial device.
+            while (true) {
+              const { value, done } = await reader.read();
+              if (done) {
+                // Allow the serial port to be closed later.
+                reader.releaseLock();
+                break;
+              }
+              // value is a Uint8Array.
+              console.log(value);
+            }
+
+              
+        });
+        
+            function stt(){
+                // get output div reference
+                var output = document.getElementById("output");
+                // get action element reference
+                var action = document.getElementById("action");
+                // new speech recognition object
+                var SpeechRecognition = SpeechRecognition || webkitSpeechRecognition;
+                var recognition = new SpeechRecognition();            
+                // This runs when the speech recognition service starts
+                recognition.onstart = function() {
+                    action.innerHTML = "<small>listening, please speak...</small>";
+                };
+                
+                recognition.onspeechend = function() {
+                    action.innerHTML = "<small>stopped listening</small>";
+                    recognition.stop();
+                }
+              
+                // This runs when the speech recognition service returns result
+                recognition.onresult = function(event) {
+                    var transcript = event.results[0][0].transcript;
+                    var confidence = event.results[0][0].confidence;
+                    output.innerHTML = transcript ;
+                    output.classList.remove("hide");
+                    
+                    if(transcript == "يمين"){
+                        console.log(transcript);
+                        send("right");
+                    }
+                    else if (transcript == "يسار") {
+                        console.log(transcript);
+                        send("lift");                        
+                    } 
+                    
+                    
+                };      
+                 // start recognition
+                 recognition.start();
+    
+            }       
+
+            async function send(text){
+                const textEncoder = new TextEncoderStream();
+                const writableStreamClosed = textEncoder.readable.pipeTo(port.writable);
+                const writer = textEncoder.writable.getWriter();
+                await writer.write(text);
+                writer.close();
+                await writableStreamClosed;         
+            }
+
+
+
+        </script>
+        </center>
+    </body>
+</html>
